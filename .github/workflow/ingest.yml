@@ -1,0 +1,38 @@
+name: Ingesta diaria
+
+# El valor de mercado solo se puede capturar hacia delante: cada día sin
+# ejecutar es un día perdido para siempre.
+on:
+  schedule:
+    # 05:30 UTC — después del recálculo nocturno de Biwenger.
+    # La hora fija importa: capturar a horas distintas rompe la comparabilidad.
+    # OJO: GitHub puede retrasar los jobs programados cuando hay carga.
+    - cron: '30 5 * * *'
+
+  # Permite lanzarlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # Ajustar al TargetFramework del .csproj
+          dotnet-version: '10.0.x'
+
+      - name: Ejecutar ingesta
+        working-directory: ./Biwenger.Ingest
+        env:
+          # Doble guion bajo = separador de sección en IConfiguration.
+          # Equivale a "ConnectionStrings:BiwengerAzure".
+          ConnectionStrings__BiwengerAzure: ${{ secrets.BIWENGER_CONNECTION }}
+          BIWENGER_TARGET: BiwengerAzure
+        run: dotnet run --configuration Release
+
+      # El código de salida ya lo propaga dotnet run: si la ingesta falla,
+      # el job sale en rojo y GitHub avisa por correo.
