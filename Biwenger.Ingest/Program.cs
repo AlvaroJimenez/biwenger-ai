@@ -1,5 +1,6 @@
 ﻿using Biwenger.Ingest;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 // =============================================================================
 // PUNTO DE ENTRADA
@@ -13,20 +14,38 @@ using Microsoft.Extensions.Configuration;
 const int ExitOk = 0;
 const int ExitFail = 1;
 
-var asOf = ParseAsOf(args);
-Log($"Ingesta Biwenger — as_of = {asOf:yyyy-MM-dd}");
-
 var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>(optional: true)
     .AddEnvironmentVariables()
     .Build();
 
-// La primera variable de entorno o argumento decide el destino.
-// Por defecto, local: ejecutar contra Azure debe ser una decisión explícita.
+// -----------------------------------------------------------------------------
+// MODO EXPLORACIÓN: vuelca payloads autenticados a samples/ y termina.
+// No toca la base de datos. Temporal, hasta conocer la forma de las respuestas.
+//     dotnet run -- dump-auth
+// -----------------------------------------------------------------------------
+if (args.Length > 0 && args[0] == "dump-auth")
+{
+    return await DumpAuthAsync(config);
+}
+
+if (args.Length > 0 && args[0] == "ingest-squad")
+{
+    return await IngestSquadAsync(config);
+}
+
+if (args.Length > 0 && args[0] == "ingest-market")
+{
+    return await IngestMarketAsync(config);
+}
+var asOf = ParseAsOf(args);
+Log($"Ingesta Biwenger — as_of = {asOf:yyyy-MM-dd}");
+
 var target = Environment.GetEnvironmentVariable("BIWENGER_TARGET") ?? "Biwenger";
 var connectionString = config.GetConnectionString(target);
 if (string.IsNullOrWhiteSpace(connectionString))
 {
+    Log($"ERROR: falta la cadena de conexión 'ConnectionStrings:{target}'.");
     Log($"       dotnet user-secrets set \"ConnectionStrings:{target}\" \"Host=...\"");
     return ExitFail;
 }
@@ -134,3 +153,165 @@ static async Task SafeFinishAsync(
 
 static void Log(string message) =>
     Console.WriteLine($"[{DateTimeOffset.Now:HH:mm:ss}] {message}");
+
+static async Task<int> DumpAuthAsync(IConfiguration config)
+{
+
+    var options = BuildAuthOptions(config);
+    if (options is null) return ExitFail;
+
+    using var http = new HttpClient();
+    using var auth = new BiwengerAuthClient(http, options);
+
+    Directory.CreateDirectory("samples");
+    var ok = true;
+
+    // Cada volcado por separado: si uno falla, el otro sigue.
+    // Así se distingue "el login no va" de "la ruta que inventé no existe".
+    foreach (var (name, fetch) in new (string, Func<Task<string>>)[]
+    {
+        ("account", () => auth.GetAccountRawAsync()),
+        ("squad",   () => auth.GetSquadRawAsync()),
+        ("market",  () => auth.GetMarketRawAsync())
+
+    })
+    {
+        try
+        {
+            var json = await fetch();
+            var path = Path.Combine("samples", $"{name}.json");
+            await File.WriteAllTextAsync(path, json);
+            Log($"OK  {name,-8} → {path} ({json.Length:N0} caracteres)");
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            Log($"FAIL {name,-8} → {ex.Message}");
+        }
+    }
+
+    return ok ? ExitOk : ExitFail;
+}
+
+static async Task<int> IngestSquadAsync(IConfiguration config)
+{
+    var asOf = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    var target = Environment.GetEnvironmentVariable("BIWENGER_TARGET") ?? "Biwenger";
+    var connectionString = config.GetConnectionString(target);
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        Log($"ERROR: falta 'ConnectionStrings:{target}'.");
+        return ExitFail;
+    }
+    Log($"Ingesta de plantilla — as_of = {asOf:yyyy-MM-dd}, destino {target}");
+
+    var options = BuildAuthOptions(config);
+    if (options is null) return ExitFail;
+
+    try
+    {
+        using var http = new HttpClient();
+        using var auth = new BiwengerAuthClient(http, options);
+
+        var response = await auth.GetSquadAsync();
+        if (response.Data is null)
+        {
+            Log("ERROR: la respuesta no traía bloque 'data'.");
+            return ExitFail;
+        }
+
+        var map = SquadMapper.Map(response.Data, options.LeagueId, asOf);
+
+        foreach (var w in map.Warnings) Log($"  · {w}");
+
+        var repo = new SquadRepository(connectionString);
+        var squadValue = await repo.SaveAsync(map);
+
+        var stored = await repo.CountSquadAsync(asOf);
+        Log($"OK. {map.Players.Count} jugadores mapeados, {stored} filas en user_squad.");
+        Log($"    Valor plantilla: {squadValue:N0} € · Saldo: {map.Account.Balance:N0} € " +
+            $"· Total: {(squadValue ?? 0) + map.Account.Balance:N0} €");
+
+        return ExitOk;
+    }
+    catch (Exception ex)
+    {
+        Log($"ERROR: {ex.Message}");
+        if (ex.InnerException is not null) Log($"       ↳ {ex.InnerException.Message}");
+        return ExitFail;
+    }
+}
+
+static BiwengerAuthOptions? BuildAuthOptions(IConfiguration config)
+{
+    var missing = new[] { "Email", "Password", "LeagueId", "UserId" }
+        .Where(k => string.IsNullOrWhiteSpace(config[$"Biwenger:{k}"]))
+        .ToList();
+
+    if (missing.Count > 0)
+    {
+        Log($"ERROR: faltan secrets: {string.Join(", ", missing.Select(m => $"Biwenger:{m}"))}");
+        return null;
+    }
+
+    return new BiwengerAuthOptions
+    {
+        Email = config["Biwenger:Email"]!,
+        Password = config["Biwenger:Password"]!,
+        LeagueId = long.Parse(config["Biwenger:LeagueId"]!),
+        UserId = long.Parse(config["Biwenger:UserId"]!)
+    };
+}
+
+static async Task<int> IngestMarketAsync(IConfiguration config)
+{
+    var asOf = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    var target = Environment.GetEnvironmentVariable("BIWENGER_TARGET") ?? "Biwenger";
+    var connectionString = config.GetConnectionString(target);
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        Log($"ERROR: falta 'ConnectionStrings:{target}'.");
+        return ExitFail;
+    }
+    Log($"Ingesta de mercado — as_of = {asOf:yyyy-MM-dd}, destino {target}");
+
+    var options = BuildAuthOptions(config);
+    if (options is null) return ExitFail;
+
+    try
+    {
+        using var http = new HttpClient();
+        using var auth = new BiwengerAuthClient(http, options);
+
+        var json = await auth.GetMarketRawAsync();
+        var response = JsonSerializer.Deserialize<MarketResponse>(json);
+
+        if (response?.Data is null)
+        {
+            Log("ERROR: la respuesta no traía bloque 'data'.");
+            return ExitFail;
+        }
+
+        var map = MarketMapper.Map(response.Data, asOf);
+        foreach (var w in map.Warnings) Log($"  · {w}");
+
+        var (sales, offers) = await new MarketRepository(connectionString).SaveAsync(map, asOf);
+
+        var system = map.Sales.Count(s => s.IsSystem);
+        var incoming = map.Offers.Count(o => o.ToUserId is not null);
+
+        Log($"OK. {sales} ventas ({system} del sistema, {sales - system} de managers), {offers} ofertas.");
+        Log($"    Ofertas entrantes: {incoming} · Salientes: {offers - incoming}" +
+            (map.MaximumBid is { } mb ? $" · Puja máxima: {mb:N0} €" : ""));
+
+        return ExitOk;
+    }
+    catch (Exception ex)
+    {
+        Log($"ERROR: {ex.Message}");
+        if (ex.InnerException is not null) Log($"       ↳ {ex.InnerException.Message}");
+        return ExitFail;
+    }
+}

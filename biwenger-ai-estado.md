@@ -1,334 +1,279 @@
-# Biwenger AI — estado del proyecto
+# Biwenger AI — Estado del proyecto
 
-Documento vivo. Actualizar al cerrar cada fase.
-Última actualización: 13 de agosto de 2026.
-
----
-
-## 1. Qué es esto y por qué
-
-Asistente de decisiones para Biwenger (fantasy de LaLiga): qué jugadores fichar
-o vender, cómo salir de deuda, qué alineación maximiza puntos.
-
-**El objetivo real no es el juego.** Es aprender a llevar features de IA a
-producción como backend senior .NET: RAG, tool calling, agentes, MCP,
-evaluación de sistemas no deterministas, y coste/latencia como restricciones de
-diseño. Biwenger es la excusa, elegida porque:
-
-- Es un problema de **decisión bajo restricciones**, no de cálculo directo
-  (presupuesto, deuda, límite de plantilla, cláusulas, precios que se mueven a
-  diario, puntuaciones con ruido). Ahí un agente aporta y una hoja de cálculo no.
-- Hay **datos temporales de verdad**, con volumen e historial.
-- El mundo da la **respuesta correcta cada semana**: predices, se juega la
-  jornada, comparas. Es un lujo enorme para aprender evaluación.
-- Lo usaría de verdad, cada jornada, durante nueve meses.
-
-Ideas descartadas por el camino: asistente documental sobre papeles propios
-(buen ejercicio técnico, menos motivador) y analizador de cartera de inversión
-(dominio demasiado pequeño: cuatro posiciones dan para pocas preguntas
-interesantes).
+_Última actualización: 24 de agosto de 2026_
 
 ---
 
-## 2. Restricciones no negociables
+## Objetivo
 
-**Independencia laboral.** Repo propio, cuenta cloud propia, datos propios.
-Nada de código, documentación ni datos de la empresa ni de sus clientes, ni
-siquiera anonimizado. El proyecto tiene que poder enseñarse en una entrevista
-sin pedir permiso a nadie.
+Sistema asesor para Biwenger (fantasy de LaLiga) construido como proyecto de
+aprendizaje de ingeniería de IA: tool calling, RAG, agentes, evaluación de
+sistemas no deterministas, y coste/latencia como restricciones de diseño.
 
-**El LLM no decide.** La optimización y los cálculos van en C# determinista y
-con tests. El modelo interpreta la pregunta, elige qué tools llamar y en qué
-orden, incorpora contexto blando (lesiones, rotaciones, rivales) y explica el
-porqué. No elige el equipo.
-
-**Solo lectura.** Nada de pujas ni alineaciones automáticas. Además de rozar los
-términos de uso, automatizar en una liga de amigos cambia el juego al que se
-está jugando. **Advisory, no automático.**
-
-**Seguridad.** Credenciales en user-secrets o Key Vault, nunca en el repo — que
-es público. Solo cuenta propia y liga propia. Caché agresiva y respeto a los
-rate limits.
-
-**Ingerir todo, filtrar tarde.** Filtrar en la ingesta destruye información de
-forma irreversible; filtrar en la consulta no. Aunque la liga no use
-entrenadores, se capturan igual.
+**Principio arquitectónico central:** el LLM aconseja, nunca decide. Todas las
+restricciones, cálculos y optimizaciones viven en C# y SQL deterministas y
+testeables. La capa de IA es exclusivamente consultiva.
 
 ---
 
-## 3. Fases
+## Estructura
 
-| Fase | Contenido | IA | Estado |
-|---|---|---|---|
-| 1 | Ingesta diaria → Postgres | Ninguna | **Ejecutada y verificada.** Falta cron |
-| 2 | Proyección de puntos + optimización de plantilla | Ninguna | Pendiente |
-| 3 | Capa de agente: tools, orquestación, evals | Aquí sí | Pendiente |
-
-Nota deliberada: en un sistema de IA en producción la IA suele ser el ~20% del
-código. El resto es esto — datos, contratos, cálculo determinista, evaluación.
-El rodeo *es* el trabajo; ahí es donde falla la gente que pone LLMs en
-producción, no en el prompt.
+```
+biwenger-ai/
+├── db/
+│   ├── schema.sql
+│   ├── schema_patch_01.sql
+│   ├── schema_patch_02.sql   ← plantilla y cuenta
+│   ├── schema_patch_03.sql   ← mercado
+│   ├── schema_patch_04.sql   ← vista de análisis de plantilla
+│   ├── schema_patch_05.sql   ← titularidad desde 'fitness'
+│   └── schema_patch_06.sql   ← vías de adquisición
+├── Biwenger.Ingest/
+│   ├── BiwengerClient.cs          (CDN público)
+│   ├── BiwengerAuthClient.cs      (autenticado)
+│   ├── Models.cs / SquadModels.cs / MarketModels.cs
+│   ├── SnapshotRepository.cs / SquadRepository.cs / MarketRepository.cs
+│   ├── DapperSetup.cs             ([ModuleInitializer] para DateOnly)
+│   └── Program.cs
+├── Biwenger.Advisor/
+│   ├── Anthropicclient.cs         ⚠️ nombre con minúscula
+│   ├── AccountTools.cs / SquadTools.cs / MarketTools.cs / PlanTools.cs
+│   └── AdvisorProgram.cs
+└── biwenger-ai-estado.md
+```
 
 ---
 
-## 4. Fase 1 — Ingesta ✅
+## FASE 1 — Ingestión pública ✅
 
-### Urgencia
+Cron diario en GitHub Actions (`30 5 * * *` UTC) contra el CDN público de
+Biwenger. Sin credenciales.
 
-La serie temporal de precios **solo se construye hacia delante**. Biwenger no
-expone histórico profundo y la liga arranca ya. Cada día sin capturar es un día
-perdido para siempre. Esto va a cron aunque no haya nada más construido.
+**Esquema en tres capas:** `raw_payload` (append-only, con sha256),
+dimensiones `team` / `player` (SCD tipo 1), hecho `player_daily` con upsert
+idempotente, `ingest_run` como canario, y vistas de tendencia.
 
-Hora fija (p. ej. 03:30). Los valores de mercado se recalculan de madrugada; si
-un día capturas a las 03:00 y otro a las 22:00, la serie deja de ser comparable.
-
-### Fuente de datos
-
-API interna de Biwenger, **no documentada y sin compromiso de estabilidad**.
-Puede cambiar sin aviso a mitad de temporada. Endpoint de datos de competición:
-`cf.biwenger.com/api/v2/competitions/la-liga/data` — público, sin auth, es el
-CDN que consume la propia web. Fijar `score=1` y no cambiarlo, o el histórico
-deja de ser comparable.
-
-> Corrección: `score=1` es **Diario AS**, no Biwenger. El payload lista los
-> sistemas disponibles en `data.scores` (1 AS, 2 SofaScore, 7 Feeberse, etc.).
-> La decisión de fijarlo sigue siendo correcta; el nombre estaba mal.
-
-Existen también endpoints autenticados (login con bearer token, cabeceras
-`X-League` / `X-User` / `X-Version`) para mercado y escritura. Fuera de alcance
-por ahora.
-
-### Infraestructura levantada
-
-- Postgres 16 en Docker: contenedor `biwenger-pg`, puerto 5432, volumen con
-  nombre `biwenger_pgdata`, `--restart unless-stopped`.
-- Proyecto `Biwenger.Ingest` (.NET, consola) dentro de la solución `Biwenger`.
-- Cadena de conexión en user-secrets. Nunca en `appsettings.json`.
-
-### Piezas escritas
-
-- `db/schema.sql` — Postgres, tres capas: `raw_payload` (JSON íntegro, nunca se
-  borra), `team` / `player` (dimensiones, SCD tipo 1), `player_daily` (hecho
-  diario). Más `ingest_run` (canario y observabilidad) y la vista
-  `v_player_value_trend` con deltas a 1 y 7 días.
-- `db/schema_patch_01.sql` — ajustes tras verificar el payload real.
-- `Models.cs` — DTOs del borde exterior + records de dominio.
-- `BiwengerClient.cs` — cliente HTTP + `BiwengerMapper` (capa anticorrupción).
-- `SnapshotRepository.cs` — Dapper/Npgsql, upserts idempotentes.
-- `Program.cs` — orquestación; admite argumento de fecha.
-
-### Decisiones de diseño
-
-**Capa raw.** Se guarda el JSON crudo *antes* de parsearlo. Si mañana descubres
-que un campo estaba mal, es un bug reparable en lugar de datos perdidos. Clave
-única por `(as_of, source, score_mode, sha256)`: mismo contenido no duplica,
-contenido distinto se guarda como fila nueva.
-
-**Anti-corruption layer.** `BiwengerMapper` es el único punto que conoce la
-forma del JSON externo. Si Biwenger cambia el contrato, se toca un fichero.
-
-**Idempotencia.** Clave `(player_id, as_of)`. Reejecutar el mismo día
-sobrescribe, no duplica.
-
-**Todo en una transacción.** Raw, dimensiones y hechos entran juntos o no entra
-nada. Un día a medias es peor que un día perdido: parece legítimo después.
-`ingest_run` queda fuera a propósito, para que el registro de un fallo
-sobreviva al rollback.
-
-**Tolerancia a fallos, con matiz.** Un jugador sin id o sin nombre se descarta y
-se registra. Una posición fuera de rango se anula pero la fila se guarda: perder
-el precio del día es peor que perder un campo. El crudo conserva la verdad.
-
-**Canario.** Si el mapeo produce menos de 100 jugadores, lanza excepción y no
-escribe nada.
-
-**Deltas por fecha exacta, no por fila anterior.** `LAG()` compararía contra la
-captura previa; si falla un día, el "delta a 1 día" mentiría en silencio. Con
-self-join sobre `as_of - 1` sale NULL, que es la verdad.
-
-**Códigos de salida.** 0 correcto, 1 fallo. El cron los necesita para alertar.
-
-### Verificación del mapeo ✅
-
-El riesgo abierto de la versión anterior **queda cerrado**: el mapeo está
-verificado contra la API real, no inferido de wrappers de la comunidad.
-
-Cinco correcciones que salieron al mirar el payload:
-
-1. **`players` y `teams` son diccionarios** indexados por id como clave de
-   texto, no arrays. Deserializar como `List<>` habría fallado en la primera
-   ejecución.
-2. **`teamID` es nullable.** Hay jugadores sin equipo.
-3. **La posición 5 es "Entrenador".** Vienen mezclados en la colección de
-   jugadores, con precio y puntuación propios.
-4. **Hay dos precios.** `price` es el valor de mercado en euros y es la serie
-   que importa (`priceIncrement` es su delta diario). `fantasyPrice` es otra
-   valoración, mucho mayor; se guarda pero no se usa.
-5. **Campos no previstos:** `fantasyPrice`, `altPositions`, `number`,
-   `statusInfo`, `statusChange`, `pointsLastSeason`. Y `team` no expone
-   `shortName`.
-
-### Primera ejecución (13/08/2026)
-
-558 jugadores, 20 equipos, **cero avisos de mapeo**.
+**Verificación (24 ago, 12 días de serie):**
 
 | Comprobación | Resultado |
 |---|---|
-| Reparto por posición | 48 POR · 185 DEF · 162 MED · 143 DEL · 20 ENT |
-| Entrenadores | 20 — uno por club, correcto |
-| Valor de mercado | mín 150.000 € · máx 25.740.000 € · media 2.343.584 € |
-| Precio no nulo | 558 / 558 |
-| Estados | 508 ok · 32 injured · 11 doubt · 4 unknown · 2 sanctioned · 1 discarded |
-| Partes médicos (`statusInfo`) | 45 — coincide exactamente con los 45 no-ok |
-| Sin equipo | 26 |
+| Duplicados | 0 en toda la serie |
+| Huecos | Ninguno (13 → 24 ago) |
+| Valores congelados | 63 % con cambio diario |
+| `price_increment` vs delta calculado | 562/562 coinciden |
 
-### Incógnita abierta 🔶
+Ese último contraste confirma que `price_increment` puede leerse directamente
+de la API en lugar de calcularse con ventanas `LAG`. **Sigue pendiente
+repetirlo en un día posterior a jornada.**
 
-**El campo `update` apunta al futuro.** En la primera captura marcaba +20 h.
-No sabemos si es el próximo recálculo programado o si lleva un offset. **No usar
-`source_updated_at` como detector de payload rancio** hasta aclararlo. Se
-resuelve solo con unos días de datos:
+---
 
-```sql
-SELECT as_of, source_updated_at,
-       source_updated_at - LAG(source_updated_at) OVER (ORDER BY as_of) AS delta
-FROM raw_payload ORDER BY as_of;
+## FASE 1b — Acceso autenticado ✅
+
+`BiwengerAuthClient` con login, caché de token, `SemaphoreSlim` con doble
+comprobación y reintento único ante 401.
+
+**Endpoints:** `POST /api/v2/auth/login`, `/api/v2/account`,
+`/api/v2/user?fields=*,players(id,owner,price)`, `/api/v2/market`.
+
+**Tablas:** `user_squad` y `user_account_daily`, ambas con snapshot diario y PK
+compuesta. `SquadRepository` borra y reinserta el día para que las bajas
+desaparezcan en lugar de quedarse pegadas.
+
+Modo `dotnet run -- ingest-squad`. **Manual a propósito:** automatizarlo
+exigiría meter las credenciales de Biwenger en GitHub Actions.
+
+---
+
+## FASE 1c — Mercado ✅
+
+Tablas `market_sale` (snapshot diario, sin id en la API) y `market_offer`
+(entidad con id estable, upsert en sitio con `first_seen_at` / `last_seen_as_of`
+para seguir el ciclo de vida de cada puja).
+
+Modo `dotnet run -- ingest-market`. También manual.
+
+---
+
+## FASE 2 — Asesor 🔄
+
+Consola `Biwenger.Advisor`, bucle de tool calling propio sobre `HttpClient`
+contra `/v1/messages`. Modelo actual: **claude-sonnet-4-6**.
+
+### Herramientas
+
+| Nombre | Fuente | Qué hace |
+|---|---|---|
+| `get_account` | Postgres | Saldo, `maximum_bid`, tamaño y reparto por posición |
+| `get_squad` | `v_squad_analysis` | Plantilla con señales económicas, tendencia, rendimiento y titularidad |
+| `get_market` | **Biwenger en vivo** | Mercado actual; persiste el snapshot como efecto secundario |
+| `check_plan` | Postgres | Verifica presupuesto y composición de un plan propuesto |
+
+`get_market` consulta en vivo porque el mercado rota a las 05:00 UTC y solo se
+persiste cuando se lanza la ingesta a mano. Al guardar lo que ve, la serie
+histórica se construye sola cada vez que se pregunta.
+
+`check_plan` es la pieza que cierra el círculo del principio arquitectónico:
+**el modelo propone, el C# verifica.** Lee los precios de la base, no del
+modelo. Distingue `problems` (bloqueantes: sin dinero, sin once posible) de
+`warnings` (riesgos: puja incierta, plantilla sin banquillo).
+
+Mínimos: 1 portero, 3 defensas, 2 centrocampistas, 1 delantero, 11 en total.
+Recomendado: 13 (once más dos suplentes) — por debajo avisa pero no bloquea.
+
+---
+
+## Trampas de datos descubiertas
+
+Todas documentadas en las descripciones de las herramientas, que es donde el
+modelo puede leerlas.
+
+**`purchase_price` nulo ≠ cero.** Los jugadores del sorteo inicial no se
+compraron. En `/user` el campo está ausente; en `/market` llega como `0`. Mismo
+significado, dos representaciones. Se normaliza a NULL al mapear.
+
+**`fitness` es un array por jornada.** Un número es la puntuación de ese
+partido; **`null` significa que no jugó**. Es la señal de titularidad, y
+distingue "jugó y sacó 0" de "no jugó" — indistinguibles mirando solo `points`.
+Encapsulado en `fitness_stats(jsonb)`, que devuelve `matchdays`,
+`matches_played`, `avg_points` y `starter_ratio`.
+
+**`at_price_floor` (150.000 €) no es una ganga.** Es el suelo de Biwenger y
+agrupa a los jugadores sin utilidad deportiva. Sin esta señal, el asesor
+recomendaba porteros que no juegan.
+
+**`points_last_season` es un TOTAL, no una media**, y NULL significa que no
+jugó en LaLiga, no que rindiera mal.
+
+**Tres vías de adquisición, no una.** Subasta del sistema (a ciegas contra
+otros managers), puja a un manager (el dueño decide, incierta) y cláusula de
+rescisión (segura, 25-50 % más cara). La cláusula está en los datos desde el
+patch 03 pero no se exponía.
+
+**`lockedUntil` ≠ `clauseLockedUntil`.** El primero bloquea la venta del
+jugador; el segundo blinda su cláusula.
+
+**`X-User` no es el `iss` del JWT.** Biwenger distingue cuenta global de
+usuario dentro de cada liga.
+
+**El campo "recalculó hace" es en realidad el próximo recálculo** — de ahí los
+valores negativos en el log.
+
+---
+
+## Bugs corregidos (y su lección)
+
+**`is_own_sale` sin `COALESCE`.** En las ventas del sistema `seller_user_id` es
+NULL, y `NOT NULL` en SQL es NULL, no true. El filtro `WHERE NOT is_own_sale`
+descartaba en silencio todo el mercado del sistema. Dmitrovic —el mejor portero
+disponible— era invisible para el asesor.
+
+**Aviso de puja en `problems` en lugar de `warnings`.** Como `viable` exigía
+`problems.Count == 0`, cualquier plan que implicara negociar con otro manager
+salía rechazado aunque el dinero sobrara. El modelo acabó recomendando
+jugadores mediocres del sistema, y parecía criterio suyo.
+
+**Lección común:** ambos producían respuestas impecables, bien razonadas y bien
+presentadas, **sobre datos incompletos**. Ninguna revisión de la respuesta los
+habría detectado. Es el argumento más fuerte a favor de la capa de evaluación.
+
+**`CREATE OR REPLACE VIEW` no permite renombrar ni reordenar columnas.** Hay
+que hacer `DROP VIEW IF EXISTS` primero.
+
+---
+
+## Coste — tabla comparativa
+
+Misma pregunta, mismos datos, midiendo el efecto de modelo y descripciones:
+
+| Configuración | Llamadas a `get_market` | Tokens entrada | Calidad |
+|---|---|---|---|
+| Haiku + descripción v1 | 5 | 18.571 | Inventa cifras, salta pasos |
+| Sonnet + descripción v1 | 5 | 31.124 | Correcta pero cara |
+| Haiku + descripción v2 | 1 | 21.427 | No suma ventas al presupuesto |
+| **Sonnet + descripción v2** | **1** | **19.870** | **Completa y correcta** |
+| Sonnet + `check_plan` | 1 (+6 verificaciones) | 108.492 | Verificada, sin errores aritméticos |
+
+**Resultado no obvio:** mejorar la descripción de la herramienta bajó el coste
+de Sonnet un 36 % *y* mejoró la respuesta, al evitar llamadas redundantes.
+Documentar mejor no fue solo calidad, fue eficiencia.
+
+**Y el coste de la corrección:** `check_plan` multiplica los tokens por cinco,
+porque cada iteración reenvía el historial completo. Es el compromiso entre
+fiabilidad y coste, medido.
+
+---
+
+## Siguientes pasos
+
+### 1. Evaluación (prioritario)
+
+Casos en JSON más un runner con aserciones verificables:
+- Todo jugador citado existe en los datos devueltos
+- Las cifras del resumen coinciden con las de `check_plan`
+- No se recomienda vender jugadores bloqueados
+- No se recomiendan jugadores con `at_price_floor`
+
+Es lo que convierte el proyecto de demo en ingeniería, y hace medibles los
+otros dos frentes.
+
+### 2. Reducir coste
+
+Que `check_plan` devuelva mensajes accionables al rechazar ("faltan X €; con la
+venta de Y cuadraría") para converger en dos iteraciones en vez de seis. Diseño
+de mensajes de error, aplicado a un consumidor que razona en lenguaje natural.
+
+### 3. "¿Qué alineación pongo?"
+
+Optimizador con restricciones en C#, con el modelo explicando el resultado y
+los descartes. Requiere que `avg_points` tenga muestra suficiente — con 2
+jornadas es ruido.
+
+---
+
+## Backlog Fase 1
+
+1. **Deriva del cron** — GitHub Actions arranca hasta +1h23m tarde
+2. **Cambio horario del 25-oct-2026** — `30 5 * * *` pasará a 06:30 local
+3. **Tests de integración en C#** — convertir las queries de verificación
+4. **Duración del job** — de 1m57s a 3m0s; vigilar saturación de la B1ms
+5. **`price_increment` post-jornada** — repetir el contraste tras una jornada
+6. **Log mal etiquetado** — "recalculó hace" es el próximo recálculo
+7. **Migraciones reproducibles** — aplicar patches a mano provocó que el 05
+   quedara solo en local y fallara en Azure
+8. **Renombrar `Anthropicclient.cs`** — la minúscula ya costó una depuración
+9. **Regla de firewall temporal** — borrar las de viaje al volver
+
+---
+
+## Infraestructura
+
+- **PostgreSQL 16** — local en Docker (`biwenger-pg`) y Azure Flexible Server
+  B1ms en Spain Central (`biwenger-pg-ajs`)
+- **GitHub Actions** — cron diario con `BIWENGER_TARGET=BiwengerAzure`
+- **Secrets** — `dotnet user-secrets` en local, secrets de repo en CI. Cada
+  proyecto tiene su propio store: `Biwenger.Advisor` necesita los suyos
+- **Anthropic API** — saldo de 5 US$, clave `biwenger-advisor`
+
+### Comandos
+
+```powershell
+# Ingesta pública (la que corre el cron)
+dotnet run
+
+# Plantilla y mercado — manuales
+$env:BIWENGER_TARGET = "BiwengerAzure"
+dotnet run -- ingest-squad
+dotnet run -- ingest-market
+
+# Asesor
+cd ..\Biwenger.Advisor
+dotnet run -- "¿a quién vendo y a quién ficho?"
+
+# Aplicar un patch a Azure
+docker cp schema_patch_NN.sql biwenger-pg:/tmp/patch.sql
+docker exec -it biwenger-pg psql "host=biwenger-pg-ajs.postgres.database.azure.com port=5432 dbname=biwenger user=biwenger sslmode=require" -f /tmp/patch.sql
 ```
 
-### Pendiente en esta fase
-
-- Cron a hora fija.
-- Contract tests contra `samples/payload.json` que avisen si cambia la forma.
-
----
-
-## 5. Fase 2 — Motor determinista (pendiente)
-
-- **Proyección de puntos** por jugador y jornada. Estadística, sin IA.
-- **Optimización de plantilla** bajo restricciones: presupuesto, deuda, límite
-  de jugadores, posiciones. Es una mochila con extras — programación dinámica o
-  fuerza bruta acotada. En C#, con tests.
-
-### Filtros de esta fase (no de la ingesta)
-
-- **Entrenadores fuera.** La liga se juega sin entrenador, solo jugadores. Se
-  excluye `position = 5` en proyección y optimización. Se siguen capturando: son
-  20 filas al día y si la configuración de la liga cambiara, el histórico está.
-- **Jugadores sin equipo fuera del universo de fichajes.** No aparecen en el
-  mercado, así que no son candidatos a comprar. Como *tenencia* sí importan —
-  ver la alerta de salida de la liga en la fase 3.
-
-### Complicaciones que confirma el payload
-
-**`altPositions`**: hay jugadores elegibles en más de una demarcación, así que
-la asignación de posición es *parte de la decisión*, no un dato fijo.
-
-La distribución de precios está muy sesgada (media 2,3M, máximo 25,7M). Ahí
-vive lo interesante: la métrica útil es puntos esperados por euro, y el valor
-está en la cola larga, no en las estrellas.
-
-**La calidad del asistente la marca esta fase, no el modelo.** Con una
-proyección mala, el agente venderá recomendaciones malas con excelente prosa.
-
-Es la fase más larga (~2 semanas) y la que no enseña nada de IA. Ver la decisión
-abierta más abajo.
-
----
-
-## 6. Fase 3 — Capa de agente (pendiente, es el objetivo)
-
-- Los cálculos de la fase 2 expuestos como **tools**. Con unas seis basta para
-  las tres preguntas reales: plantilla actual, precio y tendencia, proyección,
-  combinaciones de venta, restricciones de formación, alineación óptima.
-- El modelo encadena llamadas: *"si vendo a X, ¿me llega para Y sin quedarme en
-  negativo?"*, *"¿por qué me recomiendas vender a Z?"*.
-- **Ingesta de texto no estructurado**: los 45 `statusInfo` del payload son
-  exactamente esto — *"Lesión muscular. Retorno estimado: Principios de
-  Septiembre"*. Los 11 `doubt` son el caso de uso canónico: ni disponible ni
-  descartado, y la decisión depende de información que no está en ninguna
-  columna numérica.
-- **Evals con feedback real**: predicción → jornada → comparación.
-- **Versionar prompts y definiciones de tools desde el principio.** Comparar
-  resultados entre ejecuciones no sirve de nada sin saber qué versión produjo
-  cada uno. Barato ahora, caro de retrofitear.
-- Lo difícil y lo que se aprende: qué hacer cuando el modelo llama mal a una
-  tool, se inventa parámetros o hay que pararle los pies.
-
-### Alerta de salida de la liga ⚡
-
-Si un jugador de la plantilla propia ficha por un equipo extranjero, hay que
-**venderlo cuanto antes**: su precio se hunde y deja de puntuar. Cada día de
-retraso cuesta dinero.
-
-Es detectable porque `player_daily` guarda el `team_id` de *cada día* — la
-dimensión `player` es SCD tipo 1 y sobrescribe, así que el histórico solo vive
-en la tabla de hechos:
-
-```sql
-SELECT p.name, d.as_of, prev.team_id AS equipo_anterior
-FROM player_daily d
-JOIN player p USING (player_id)
-JOIN player_daily prev
-  ON prev.player_id = d.player_id AND prev.as_of = d.as_of - 1
-WHERE d.team_id IS NULL AND prev.team_id IS NOT NULL;
-```
-
-Encaja como tool de fase 3 (*"¿hay algo urgente en mi plantilla?"*) y como
-comprobación diaria del propio job. Requiere al menos dos días de capturas
-consecutivas: un motivo más para el cron.
-
-### Interfaz elegida
-
-**Servidor MCP en C#.** En vez de construir un frontend de chat, se expone el
-motor como servidor MCP y se conecta a Claude Desktop — cliente, historial y UI
-gratis. Como proyecto enseñable en entrevista suena mejor que otro chatbot.
-
----
-
-## 7. Decisión abierta 🔶
-
-**¿Orden lógico o invertido?**
-
-- **Lógico:** ingesta → motor → agente. Se toca IA dentro de dos o tres semanas.
-- **Invertido:** montar el agente ya contra tools mockeadas, validar el bucle
-  completo de tool calling esta semana, y luego sustituir mocks por
-  implementaciones reales.
-
-Matiz sobre el invertido: no es peor ingeniería. Definir las tools primero y
-darles una implementación falsa es diseño por contrato — fijar firmas, tipos de
-retorno y errores antes de comprometerse con la implementación. Lo que sí sería
-peor ingeniería es *quedarse* en los mocks.
-
-Precaución si se toma ese camino: **que los mocks devuelvan datos con forma
-realista, no constantes**. Una plantilla plausible, un caso de deuda, un caso
-sin solución factible, y los errores desde el principio (*no hay solución dentro
-del presupuesto*, *jugador inexistente*). Con mocks que devuelven `42` se
-diseñan firmas que el optimizador real no puede cumplir.
-
-El cron de ingesta es independiente y arranca igual.
-
----
-
-## 8. Siguientes pasos inmediatos
-
-1. ~~Levantar Postgres, aplicar `schema.sql`, ejecutar la ingesta una vez.~~ ✅
-2. ~~Verificar el mapeo contra `raw_payload` y corregir los DTOs.~~ ✅
-3. **Poner el job en cron a hora fija.**
-4. Resolver la decisión del punto 7.
-5. Contract tests contra `samples/payload.json`.
-
----
-
-## 9. Perfil de quien lo construye
-
-Backend senior .NET, ~10 años: microservicios, APIs REST, MongoDB, GCP/Azure,
-Azure DevOps, gRPC, Azure Service Bus. Ya montó un e-commerce con DDD/CQRS/Clean
-Architecture desplegado en Azure con CI/CD.
-
-Aprende **construyendo proyectos, no con cursos** — validado con el e-commerce.
-No hacen falta explicaciones de fundamentos de C#, inyección de dependencias,
-SQL ni arquitectura. Sí hacen falta en: RAG, embeddings, vector stores,
-evaluación de sistemas no deterministas y diseño de agentes.
-
-Horizonte: crecer hacia Technical Lead, y tener algo demostrable para el próximo
-proceso de selección.
+⚠️ `$env:BIWENGER_TARGET` persiste en la ventana de PowerShell. Cerrarla al
+terminar, o volver a `"Biwenger"`.

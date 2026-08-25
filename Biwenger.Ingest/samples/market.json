@@ -1,0 +1,824 @@
+  {
+    "status": 200,
+    "data": {
+      "status": {
+        "balance": 2402199,
+        "maximumBid": 21567199
+      },
+      "sales": [
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 2360000,
+          "player": {
+            "id": 1523
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 1871
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 460000,
+          "player": {
+            "id": 10292
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 190000,
+          "player": {
+            "id": 12734
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 190000,
+          "player": {
+            "id": 25158
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 2330000,
+          "player": {
+            "id": 26077
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 27625
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 270000,
+          "player": {
+            "id": 32569
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 260000,
+          "player": {
+            "id": 33474
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 900000,
+          "player": {
+            "id": 33970
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 35308
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 10070000,
+          "player": {
+            "id": 35770
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 36566
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 480000,
+          "player": {
+            "id": 37525
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 39223
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 1050000,
+          "player": {
+            "id": 39388
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 220000,
+          "player": {
+            "id": 40037
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 700000,
+          "player": {
+            "id": 41940
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 150000,
+          "player": {
+            "id": 42328
+          },
+          "user": null
+        },
+        {
+          "date": 1787202203,
+          "until": 1787288400,
+          "price": 2370000,
+          "player": {
+            "id": 42370
+          },
+          "user": null
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 5040000,
+          "player": {
+            "id": 163,
+            "owner": {
+              "clause": 7560000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 6660000,
+          "player": {
+            "id": 1927,
+            "owner": {
+              "clause": 12156810,
+              "date": 1786165478,
+              "price": 8104540,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 5680000,
+          "player": {
+            "id": 5220,
+            "owner": {
+              "clause": 8520000,
+              "date": 1786078981,
+              "price": 5412000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 6690000,
+          "player": {
+            "id": 17687,
+            "owner": {
+              "clause": 10035000,
+              "date": 1786165477,
+              "price": 6124670,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 3350000,
+          "player": {
+            "id": 26092,
+            "owner": {
+              "clause": 5025000,
+              "date": 1785819871,
+              "price": 2358080,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 1460000,
+          "player": {
+            "id": 26131,
+            "owner": {
+              "clause": 2190000,
+              "date": 1786770131,
+              "price": 1340000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 2620000,
+          "player": {
+            "id": 28103,
+            "owner": {
+              "clause": 3930000,
+              "date": 1785819871,
+              "price": 2153000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787209432,
+          "until": 1787382232,
+          "price": 1410000,
+          "player": {
+            "id": 37416,
+            "owner": {
+              "clause": 2115000,
+              "date": 1786251831,
+              "price": 426000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863245,
+            "name": "Real Michis FC",
+            "icon": "i/u/12863245.png?v=50"
+          }
+        },
+        {
+          "date": 1787118535,
+          "until": 1787291335,
+          "price": 1890000,
+          "player": {
+            "id": 26592,
+            "owner": {
+              "clause": 2835000,
+              "date": 1786078981,
+              "price": 1764000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863263,
+            "name": "Gatonellà F.C.",
+            "icon": "i/u/12863263.png?v=48"
+          }
+        },
+        {
+          "date": 1787118533,
+          "until": 1787291333,
+          "price": 150000,
+          "player": {
+            "id": 27575,
+            "owner": {
+              "clause": 225000,
+              "date": 1786424877,
+              "price": 150000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863263,
+            "name": "Gatonellà F.C.",
+            "icon": "i/u/12863263.png?v=48"
+          }
+        },
+        {
+          "date": 1787196535,
+          "until": 1787369335,
+          "price": 330000,
+          "player": {
+            "id": 38318,
+            "owner": {
+              "clause": 495000,
+              "date": 1786424877,
+              "price": 330000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863263,
+            "name": "Gatonellà F.C.",
+            "icon": "i/u/12863263.png?v=48"
+          }
+        },
+        {
+          "date": 1787118528,
+          "until": 1787291328,
+          "price": 2270000,
+          "player": {
+            "id": 41416,
+            "owner": {
+              "clause": 3390000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 12863263,
+            "name": "Gatonellà F.C.",
+            "icon": "i/u/12863263.png?v=48"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 7690000,
+          "expired": true,
+          "player": {
+            "id": 947,
+            "owner": {
+              "clause": 11610000,
+              "date": 1785733335,
+              "price": 7550001,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 3880000,
+          "expired": true,
+          "player": {
+            "id": 1995,
+            "owner": {
+              "clause": 5850000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 2030000,
+          "expired": true,
+          "player": {
+            "id": 8670,
+            "owner": {
+              "clause": 3210000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 3490000,
+          "expired": true,
+          "player": {
+            "id": 17482,
+            "owner": {
+              "clause": 5145000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 150000,
+          "expired": true,
+          "player": {
+            "id": 19693,
+            "owner": {
+              "clause": 225000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 4860000,
+          "expired": true,
+          "player": {
+            "id": 30123,
+            "owner": {
+              "clause": 7305000,
+              "date": 1785646908,
+              "price": 4200000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 2600000,
+          "expired": true,
+          "player": {
+            "id": 31989,
+            "owner": {
+              "clause": 3855000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 1100000,
+          "expired": true,
+          "player": {
+            "id": 37723,
+            "owner": {
+              "clause": 1650000,
+              "date": 1785992662,
+              "price": 1100000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787031675,
+          "until": 1787204475,
+          "price": 1670000,
+          "expired": true,
+          "player": {
+            "id": 39924,
+            "owner": {
+              "clause": 2520000,
+              "date": 1785603178,
+              "price": 0,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        },
+        {
+          "date": 1787173901,
+          "until": 1787346701,
+          "price": 150000,
+          "player": {
+            "id": 41421,
+            "owner": {
+              "clause": 225000,
+              "date": 1786683854,
+              "price": 150000,
+              "clauseLockedUntil": 1787252400
+            }
+          },
+          "user": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          }
+        }
+      ],
+      "offers": [
+        {
+          "id": 78346281,
+          "amount": 7485400,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            947
+          ]
+        },
+        {
+          "id": 367361193,
+          "amount": 3381000,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            17482
+          ]
+        },
+        {
+          "id": 479478712,
+          "amount": 460000,
+          "created": 1787204709,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "to": null,
+          "requestedPlayers": [
+            10292
+          ]
+        },
+        {
+          "id": 886422513,
+          "amount": 2682000,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            31989
+          ]
+        },
+        {
+          "id": 1088423337,
+          "amount": 1744600,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            39924
+          ]
+        },
+        {
+          "id": 1344803637,
+          "amount": 4805300,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            30123
+          ]
+        },
+        {
+          "id": 1819600113,
+          "amount": 4083700,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            1995
+          ]
+        },
+        {
+          "id": 1840333413,
+          "amount": 1082700,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            37723
+          ]
+        },
+        {
+          "id": 2270159566,
+          "amount": 155900,
+          "created": 1787202203,
+          "until": 1787374800,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            41421
+          ]
+        },
+        {
+          "id": 3596501434,
+          "amount": 2067300,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            8670
+          ]
+        },
+        {
+          "id": 4252063486,
+          "amount": 151800,
+          "created": 1787115722,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": null,
+          "to": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "requestedPlayers": [
+            19693
+          ]
+        },
+        {
+          "id": 4258291291,
+          "amount": 480000,
+          "created": 1787204615,
+          "until": 1787288400,
+          "status": "waiting",
+          "type": "purchase",
+          "from": {
+            "id": 13094954,
+            "name": "Unión Deportiva Gatuna",
+            "icon": "i/u/13094954.png?v=1"
+          },
+          "to": null,
+          "requestedPlayers": [
+            37525
+          ]
+        }
+      ]
+    }
+  }
