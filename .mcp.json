@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "biwenger": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "C:/BiwengerTool/biwenger-ai/Biwenger.Mcp/bin/Debug/net10.0/Biwenger.Mcp.dll"
+      ]
+    }
+  }
+}
